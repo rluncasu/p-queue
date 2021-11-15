@@ -54,6 +54,10 @@ export default class PQueue<QueueType extends Queue<RunFunction, EnqueueOptionsT
 
 	private readonly _throwOnTimeout: boolean;
 
+	private readonly _staggeringInterval?: number;
+
+	private _anotherStartedTimestamp;
+
 	constructor(options?: Options<QueueType, EnqueueOptionsType>) {
 		super();
 
@@ -65,7 +69,8 @@ export default class PQueue<QueueType extends Queue<RunFunction, EnqueueOptionsT
 			concurrency: Infinity,
 			autoStart: true,
 			queueClass: PriorityQueue,
-			...options
+			staggering: 0,
+			...options,
 		} as Options<QueueType, EnqueueOptionsType>;
 
 		if (!(typeof options.intervalCap === 'number' && options.intervalCap >= 1)) {
@@ -86,6 +91,13 @@ export default class PQueue<QueueType extends Queue<RunFunction, EnqueueOptionsT
 		this._timeout = options.timeout;
 		this._throwOnTimeout = options.throwOnTimeout === true;
 		this._isPaused = options.autoStart === false;
+		this._anotherStartedTimestamp = Date.now();
+		this._staggeringInterval = options.staggering;
+	}
+
+	private get _doesStaggeringAllowAnother() {
+		const timePassed = Date.now() - this._anotherStartedTimestamp;
+		return timePassed >= (this._staggeringInterval ? this._staggeringInterval : 0);
 	}
 
 	private get _doesIntervalAllowAnother(): boolean {
@@ -164,6 +176,10 @@ export default class PQueue<QueueType extends Queue<RunFunction, EnqueueOptionsT
 		if (!this._isPaused) {
 			const canInitializeInterval = !this._isIntervalPaused();
 			if (this._doesIntervalAllowAnother && this._doesConcurrentAllowAnother) {
+				while (!this._doesStaggeringAllowAnother) {
+					// Wait for the staggering to end
+				}
+
 				const job = this._queue.dequeue();
 				if (!job) {
 					return false;
@@ -176,6 +192,7 @@ export default class PQueue<QueueType extends Queue<RunFunction, EnqueueOptionsT
 					this._initializeIntervalIfNeeded();
 				}
 
+				this._anotherStartedTimestamp = Date.now();
 				return true;
 			}
 		}

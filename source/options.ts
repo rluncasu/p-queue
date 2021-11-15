@@ -4,7 +4,10 @@ export interface QueueAddOptions {
 	readonly [key: string]: unknown;
 }
 
-export interface Options<QueueType extends Queue<RunFunction, QueueOptions>, QueueOptions extends QueueAddOptions> {
+export interface Options<
+	QueueType extends Queue<RunFunction, QueueOptions>,
+	QueueOptions extends QueueAddOptions
+> {
 	/**
 	Concurrency limit.
 
@@ -62,6 +65,13 @@ export interface Options<QueueType extends Queue<RunFunction, QueueOptions>, Que
 	@default false
 	*/
 	throwOnTimeout?: boolean;
+
+	/**
+    Staggering interval in milliseconds.
+
+  @default false
+  */
+	staggering?: number;
 }
 
 export interface DefaultAddOptions extends QueueAddOptions {
